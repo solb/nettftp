@@ -25,6 +25,8 @@ static const char *const ERR_UNKNOWNTID   = "05";
 static const char *const ERR_CLOBBER      = "06";
 static const char *const ERR_UNKNOWNUSER  = "07";
 
+static char *recvstr(int);
+static char *recvstra(int, struct sockaddr_in *, socklen_t *);
 static void handle_error(const char *);
 
 int main(void)
@@ -42,22 +44,41 @@ int main(void)
 	if(bind(socketfd, (struct sockaddr *)&saddr_local, sizeof saddr_local))
 		handle_error("bind()");
 
+	// Echo any client that connects:
+	struct sockaddr_in saddr_remote;
+	socklen_t sktaddrmt_len = sizeof saddr_remote;
+	char *message = recvstra(socketfd, &saddr_remote, &sktaddrmt_len);
+	if(message)
+	{
+		printf("%s\n", message);
+		free(message);
+	}
+
+	return 0;
+}
+
+char *recvstr(int sfd)
+{
+	return recvstra(sfd, NULL, 0);
+}
+
+char *recvstra(int sfd, struct sockaddr_in *rmt_saddr, socklen_t *rsaddr_len)
+{
 	// Listen for an incoming message and note its length:
-	struct sockaddr saddr_remote;
-	socklen_t sarmt_len = sizeof saddr_remote;
 	ssize_t msg_len;
-	if((msg_len = recvfrom(socketfd, NULL, 0, MSG_TRUNC|MSG_PEEK, &saddr_remote, &sarmt_len)) <= 0) // TODO Handle shutdown
+	if((msg_len = recvfrom(sfd, NULL, 0, MSG_TRUNC|MSG_PEEK, (struct sockaddr *)rmt_saddr, rsaddr_len)) < 0) // TODO Handle shutdown
 		handle_error("recvfrom()");
+
+	if(msg_len == 0) // Client closed connection
+		return NULL;
 	++msg_len; // Increment length to leave room for a NULL-terminator
 
 	// Read the message:
-	char message[msg_len];
-	memset(message, 0, msg_len);
-	if(recv(socketfd, &message, msg_len, 0) <= 0) // TODO Handle multiple clients
-		handle_error("recvfrom()");
-	printf("%s\n", message);
-
-	return 0;
+	char *msg = malloc(msg_len);
+	memset(msg, 0, msg_len);
+	if(recv(sfd, msg, msg_len, 0) <= 0) // TODO Handle multiple clients
+		handle_error("recv()");
+	return msg;
 }
 
 void handle_error(const char *desc)
