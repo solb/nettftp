@@ -26,15 +26,20 @@ int main(void)
 	if(bind(socketfd, (struct sockaddr *)&saddr_local, sizeof saddr_local))
 		handle_error("bind()");
 
-	// Listen for an incoming message:
-	char resp[10]; // TODO Set this length correctly
+	// Listen for an incoming message and note its length:
 	struct sockaddr saddr_remote;
 	socklen_t sarmt_len = sizeof saddr_remote;
-	memset(resp, 0, sizeof resp);
-	if(recvfrom(socketfd, resp, sizeof resp, 0, &saddr_remote, &sarmt_len) <= 0)
+	ssize_t msg_len;
+	if((msg_len = recvfrom(socketfd, NULL, 0, MSG_TRUNC|MSG_PEEK, &saddr_remote, &sarmt_len)) <= 0) // TODO Handle shutdown
 		handle_error("recvfrom()");
+	++msg_len; // Increment length to leave room for a NULL-terminator
 
-	printf("%s", resp);
+	// Read the message:
+	char message[msg_len];
+	memset(message, 0, msg_len);
+	if(recv(socketfd, &message, msg_len, 0) <= 0) // TODO Handle multiple clients
+		handle_error("recvfrom()");
+	printf("%s\n", message);
 
 	return 0;
 }
