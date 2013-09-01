@@ -7,7 +7,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Connection parameters:
 static const in_port_t PORT = 1069;
+
+// Protocol details:
+static const char *const OPC_RRQ = "01";
+static const char *const OPC_WRQ = "02";
+static const char *const OPC_DAT = "03";
+static const char *const OPC_ACK = "04";
+static const char *const OPC_ERR = "05";
+static const char *const ERR_UNKNOWN      = "00";
+static const char *const ERR_NOTFOUND     = "01";
+static const char *const ERR_ACCESSDENIED = "02";
+static const char *const ERR_DISKFULL     = "03";
+static const char *const ERR_ILLEGALOPER  = "04";
+static const char *const ERR_UNKNOWNTID   = "05";
+static const char *const ERR_CLOBBER      = "06";
+static const char *const ERR_UNKNOWNUSER  = "07";
 
 static void handle_error(const char *);
 
