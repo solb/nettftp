@@ -11,41 +11,25 @@
 static const in_port_t PORT = 1069;
 
 // Protocol details:
-static const char *const OPC_RRQ = "01";
-static const char *const OPC_WRQ = "02";
-static const char *const OPC_DAT = "03";
-static const char *const OPC_ACK = "04";
-static const char *const OPC_ERR = "05";
+static const uint16_t OPC_RRQ = 1;
+static const uint16_t OPC_WRQ = 2;
+static const uint16_t OPC_DAT = 3;
+static const uint16_t OPC_ACK = 4;
+static const uint16_t OPC_ERR = 5;
 static const char *const MODE_ASCII = "netascii";
 static const char *const MODE_OCTET = "octet";
-static const char *const ERR_UNKNOWN      = "00";
-static const char *const ERR_NOTFOUND     = "01";
-static const char *const ERR_ACCESSDENIED = "02";
-static const char *const ERR_DISKFULL     = "03";
-static const char *const ERR_ILLEGALOPER  = "04";
-static const char *const ERR_UNKNOWNTID   = "05";
-static const char *const ERR_CLOBBER      = "06";
-static const char *const ERR_UNKNOWNUSER  = "07";
+static const uint16_t ERR_UNKNOWN      = 0;
+static const uint16_t ERR_NOTFOUND     = 1;
+static const uint16_t ERR_ACCESSDENIED = 2;
+static const uint16_t ERR_DISKFULL     = 3;
+static const uint16_t ERR_ILLEGALOPER  = 4;
+static const uint16_t ERR_UNKNOWNTID   = 5;
+static const uint16_t ERR_CLOBBER      = 6;
+static const uint16_t ERR_UNKNOWNUSER  = 7;
 
-static const int OFFSET_FILENAME = 2;
-static const int OFFSET_TRSFMODE = 2;
-
-typedef int bool;
-struct request
-{
-	char *message;
-	size_t fname_len;
-};
-
-void req_init(struct request *, char *);
-bool req_oftype(struct request *const, const char *const);
-char *req_filename(struct request *);
-char *req_mode(struct request *);
-bool req_null(struct request *const);
-bool req_del(struct request *);
-
-static char *recvstr(int);
-static char *recvstra(int, struct sockaddr_in *, socklen_t *);
+static void strtolower(char *, size_t);
+static void *recvpkt(int, ssize_t *);
+static void *recvpkta(int, ssize_t *, struct sockaddr_in *, socklen_t *);
 static void handle_error(const char *);
 
 int main(void)
@@ -63,105 +47,72 @@ int main(void)
 	if(bind(socketfd, (struct sockaddr *)&saddr_local, sizeof saddr_local))
 		handle_error("bind()");
 
-	struct sockaddr_in saddr_remote;
-	socklen_t sktaddrmt_len = sizeof saddr_remote;
-	struct request sess_hder;
-	sess_hder.message = NULL;
-
 	while(1)
 	{
-		if(!req_null(&sess_hder))
-			req_del(&sess_hder);
-		req_init(&sess_hder, recvstra(socketfd, &saddr_remote, &sktaddrmt_len));
+		struct sockaddr_in saddr_remote;
+		socklen_t sktaddrmt_len = sizeof saddr_remote;
+		void *request = NULL;
+		ssize_t req_len = 0;
 
-		printf("filename: %s\n", req_filename(&sess_hder));
-		printf("xfermode: %s\n", req_mode(&sess_hder));
+		request = recvpkta(socketfd, &req_len, &saddr_remote, &sktaddrmt_len);
 
-		if(req_oftype(&sess_hder, OPC_RRQ))
-			printf("requested send mode\n");
-		else if(req_oftype(&sess_hder, OPC_WRQ))
-			printf("requested receive mode\n");
+		uint16_t opcode = *(uint16_t *)request;
+		char *filename = (char *)(request+2);
+		size_t fname_len = strlen(filename);
+		char *mode = (char *)(filename+fname_len+1);
+		size_t mode_len = strlen(mode);
+		strtolower(mode, mode_len);
+
+		if(opcode == OPC_RRQ)
+			printf("opcode: RRQ\n");
+		else if(opcode == OPC_WRQ)
+			printf("opcode: WRQ\n");
 		else
-			printf("requested INVALID mode\n");
-	}
+			printf("unexpected opcode!\n");
+		printf("filename: %s\n", filename);
+		printf("xfermode: %s\n", mode);
+		putchar('\n');
+		// TODO Check whether string sizes exceed that of entire packet
 
-	if(!req_null(&sess_hder))
-		req_del(&sess_hder);
+		if(request)
+			free(request);
+	}
 
 	return 0;
 }
 
-char *recvstr(int sfd)
+void strtolower(char *a, size_t l)
 {
-	return recvstra(sfd, NULL, 0);
+	int index;
+	for(index = 0; index < l; ++index)
+		a[index] = tolower(a[index]);
 }
 
-char *recvstra(int sfd, struct sockaddr_in *rmt_saddr, socklen_t *rsaddr_len)
+void *recvpkt(int sfd, ssize_t *msg_len)
+{
+	return recvpkta(sfd, msg_len, NULL, 0);
+}
+
+void *recvpkta(int sfd, ssize_t *msg_len, struct sockaddr_in *rmt_saddr, socklen_t *rsaddr_len)
 {
 	// Listen for an incoming message and note its length:
-	ssize_t msg_len;
-	if((msg_len = recvfrom(sfd, NULL, 0, MSG_TRUNC|MSG_PEEK, (struct sockaddr *)rmt_saddr, rsaddr_len)) < 0) // TODO Handle shutdown
+	if((*msg_len = recvfrom(sfd, NULL, 0, MSG_TRUNC|MSG_PEEK, (struct sockaddr *)rmt_saddr, rsaddr_len)) < 0) // TODO Handle shutdown
 		handle_error("recvfrom()");
 
-	if(msg_len == 0) // Client closed connection
+	// Check for client closing connection:
+	if(*msg_len == 0)
 		return NULL;
-	++msg_len; // Increment length to leave room for a NULL-terminator
 
 	// Read the message:
-	char *msg = malloc(msg_len);
-	memset(msg, 0, msg_len);
-	if(recv(sfd, msg, msg_len, 0) <= 0) // TODO Handle multiple clients
+	void *msg = malloc(*msg_len);
+	if(recv(sfd, msg, *msg_len, 0) <= 0)
 		handle_error("recv()");
 	return msg;
 }
 
-void req_init(struct request *req, char *msg)
-{
-	req->message = msg;
-	req->fname_len = strlen(req_filename(req));
-
-	char *loc = req_mode(req);
-	while(*loc != '\0')
-	{
-		*loc = tolower(*loc);
-		++loc;
-	}
-}
-
-bool req_oftype(struct request *const req, const char *const typeconst)
-{
-	return strncmp(req->message, typeconst, 2) == 0;
-}
-
-char *req_filename(struct request *req)
-{
-	return req->message+OFFSET_FILENAME;
-}
-
-char *req_mode(struct request *req)
-{
-	return req_filename(req)+req->fname_len+OFFSET_TRSFMODE;
-}
-
-bool req_null(struct request *const req)
-{
-	return !req->message;
-}
-
-bool req_del(struct request *req)
-{
-	if(req_null(req))
-	{
-		free(req->message);
-		req->message = NULL;
-		req->fname_len = 0;
-		return 1;
-	}
-	return 0;
-}
-
 void handle_error(const char *desc)
 {
+	int errcode = errno;
 	perror(desc);
-	exit(errno);
+	exit(errcode);
 }
