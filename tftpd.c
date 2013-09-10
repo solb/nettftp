@@ -31,7 +31,6 @@ static const int OFFSET_FILENAME = 2;
 static const int OFFSET_TRSFMODE = 2;
 
 typedef int bool;
-enum protoc_state {WAIT, SEND, RECV, INVALID};
 struct request
 {
 	char *message;
@@ -64,39 +63,26 @@ int main(void)
 	if(bind(socketfd, (struct sockaddr *)&saddr_local, sizeof saddr_local))
 		handle_error("bind()");
 
-	enum protoc_state state = WAIT;
 	struct sockaddr_in saddr_remote;
 	socklen_t sktaddrmt_len = sizeof saddr_remote;
 	struct request sess_hder;
+	sess_hder.message = NULL;
 
 	while(1)
 	{
-		if(state == WAIT)
-		{
-			if(!req_null(&sess_hder))
-				req_del(&sess_hder);
-			req_init(&sess_hder, recvstra(socketfd, &saddr_remote, &sktaddrmt_len));
+		if(!req_null(&sess_hder))
+			req_del(&sess_hder);
+		req_init(&sess_hder, recvstra(socketfd, &saddr_remote, &sktaddrmt_len));
 
-			printf("filename: %s\n", req_filename(&sess_hder));
-			printf("xfermode: %s\n", req_mode(&sess_hder));
+		printf("filename: %s\n", req_filename(&sess_hder));
+		printf("xfermode: %s\n", req_mode(&sess_hder));
 
-			if(req_oftype(&sess_hder, OPC_RRQ))
-				state = SEND;
-			else if(req_oftype(&sess_hder, OPC_WRQ))
-				state = RECV;
-			else
-				state = INVALID;
-		}
-		else if(state != INVALID)
-		{
-			printf("Entering send/receive mode\n");
-			break;
-		}
+		if(req_oftype(&sess_hder, OPC_RRQ))
+			printf("requested send mode\n");
+		else if(req_oftype(&sess_hder, OPC_WRQ))
+			printf("requested receive mode\n");
 		else
-		{
-			fprintf(stderr, "Attempted invalid state transition\n");
-			break;
-		}
+			printf("requested INVALID mode\n");
 	}
 
 	if(!req_null(&sess_hder))
