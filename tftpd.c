@@ -1,8 +1,8 @@
 // Simple TFTP server implementation.
 // Author: Sol Boucher <slb1566@rit.edu>
 
-#include <errno.h>
 #include <netinet/in.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +26,8 @@ static const uint16_t ERR_ILLEGALOPER  = 4;
 static const uint16_t ERR_UNKNOWNTID   = 5;
 static const uint16_t ERR_CLOBBER      = 6;
 static const uint16_t ERR_UNKNOWNUSER  = 7;
+
+static void *connection(void *);
 
 static void strtolower(char *, size_t);
 static void *recvpkt(int, ssize_t *);
@@ -52,7 +54,7 @@ int main(void)
 		struct sockaddr_in saddr_remote;
 		socklen_t sktaddrmt_len = sizeof saddr_remote;
 		void *request = NULL;
-		ssize_t req_len = 0;
+		ssize_t req_len = 0; // Includes extra terminator
 
 		request = recvpkta(socketfd, &req_len, &saddr_remote, &sktaddrmt_len);
 
@@ -72,13 +74,26 @@ int main(void)
 		printf("filename: %s\n", filename);
 		printf("xfermode: %s\n", mode);
 		putchar('\n');
-		// TODO Check whether string sizes exceed that of entire packet
+
+		if((opcode == OPC_RRQ || opcode == OPC_WRQ) && req_len-1 == 2+fname_len+1+mode_len+1)
+		{
+			pthread_t thread;
+			pthread_create(&thread, NULL, &connection, NULL);
+		}
+		else
+			printf("bad: %ld != %ld\n", req_len-1, 2+fname_len+1+mode_len+1);
 
 		if(request)
 			free(request);
 	}
 
 	return 0;
+}
+
+void *connection(void *ignored)
+{
+	printf("spawned a thread!\n");
+	return NULL;
 }
 
 void strtolower(char *a, size_t l)
