@@ -30,24 +30,14 @@ static const uint16_t ERR_UNKNOWNUSER  = 7;
 static void *connection(void *);
 
 static void strtolower(char *, size_t);
+static int openudp(uint16_t);
 static void *recvpkt(int, ssize_t *);
 static void *recvpkta(int, ssize_t *, struct sockaddr_in *, socklen_t *);
 static void handle_error(const char *);
 
 int main(void)
 {
-	// Open UDP socket over IP:
-	int socketfd;
-	if((socketfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) // TODO IPv6 support
-		handle_error("socket()");
-
-	// Bind to interface port:
-	struct sockaddr_in saddr_local;
-	saddr_local.sin_family = AF_INET;
-	saddr_local.sin_port = htons(PORT); // TODO Try privileged port, then fall back
-	saddr_local.sin_addr.s_addr = INADDR_ANY;
-	if(bind(socketfd, (struct sockaddr *)&saddr_local, sizeof saddr_local))
-		handle_error("bind()");
+	int socketfd = openudp(PORT);
 
 	while(1)
 	{
@@ -78,7 +68,9 @@ int main(void)
 		if((opcode == OPC_RRQ || opcode == OPC_WRQ) && req_len-1 == 2+fname_len+1+mode_len+1)
 		{
 			pthread_t thread;
-			pthread_create(&thread, NULL, &connection, NULL);
+			struct sockaddr_in *remote = malloc(sktaddrmt_len);
+			memcpy(remote, &saddr_remote, sktaddrmt_len);
+			pthread_create(&thread, NULL, &connection, remote);
 		}
 		else
 			printf("bad: %ld != %ld\n", req_len-1, 2+fname_len+1+mode_len+1);
@@ -90,9 +82,24 @@ int main(void)
 	return 0;
 }
 
-void *connection(void *ignored)
+void *connection(void *rmt_sckt_addr)
 {
 	printf("spawned a thread!\n");
+
+	struct sockaddr_in *rmtsocket = (struct sockaddr_in *)rmt_sckt_addr;
+	int locsocket = openudp(0);
+
+	struct sockaddr_in mysock;
+	socklen_t mysck_len = sizeof mysock;
+	getsockname(locsocket, (struct sockaddr *)&mysock, &mysck_len);
+	printf("%hu\n", ntohs(mysock.sin_port)); // TODO Remove all this if unused
+
+	uint16_t ack[2]; // TODO Send DATA instead for RRQs
+	ack[0] = OPC_ACK;
+	ack[1] = (uint16_t)0;
+	sendto(locsocket, ack, sizeof ack, 0, (struct sockaddr *)rmtsocket, sizeof rmtsocket);
+
+	free(rmt_sckt_addr);
 	return NULL;
 }
 
@@ -101,6 +108,24 @@ void strtolower(char *a, size_t l)
 	int index;
 	for(index = 0; index < l; ++index)
 		a[index] = tolower(a[index]);
+}
+
+int openudp(uint16_t port)
+{
+	// Open UDP socket over IP:
+	int socketfd;
+	if((socketfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) // TODO IPv6 support
+		handle_error("socket()");
+
+	// Bind to interface port:
+	struct sockaddr_in saddr_local;
+	saddr_local.sin_family = AF_INET;
+	saddr_local.sin_port = htons(port); // TODO Try privileged port, then fall back
+	saddr_local.sin_addr.s_addr = INADDR_ANY;
+	if(bind(socketfd, (struct sockaddr *)&saddr_local, sizeof saddr_local))
+		handle_error("bind()");
+
+	return socketfd;
 }
 
 void *recvpkt(int sfd, ssize_t *msg_len)
