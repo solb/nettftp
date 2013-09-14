@@ -68,9 +68,11 @@ int main(void)
 		if((opcode == OPC_RRQ || opcode == OPC_WRQ) && req_len-1 == 2+fname_len+1+mode_len+1)
 		{
 			pthread_t thread;
-			struct sockaddr_in *remote = malloc(sktaddrmt_len);
-			memcpy(remote, &saddr_remote, sktaddrmt_len);
-			pthread_create(&thread, NULL, &connection, remote);
+			void *actuals = malloc(sktaddrmt_len+2+fname_len+1);
+			*(struct sockaddr_in *)actuals = saddr_remote;
+			*(uint16_t *)(actuals+sktaddrmt_len) = opcode;
+			memcpy(actuals+sktaddrmt_len+2, filename, fname_len+1);
+			pthread_create(&thread, NULL, &connection, actuals);
 		}
 		else
 			printf("bad: %ld != %ld\n", req_len-1, 2+fname_len+1+mode_len+1);
@@ -82,11 +84,15 @@ int main(void)
 	return 0;
 }
 
-void *connection(void *rmt_sckt_addr)
+void *connection(void *args)
 {
 	printf("spawned a thread!\n");
 
-	struct sockaddr_in *rmtsocket = (struct sockaddr_in *)rmt_sckt_addr;
+	struct sockaddr_in *rmtsocket = (struct sockaddr_in *)args;
+	socklen_t rmtskt_len = sizeof *rmtsocket;
+	uint16_t oper = *(uint16_t *)(args+rmtskt_len);
+	char *filename = (char *)(args+rmtskt_len+2);
+	printf("oper: %hu\nname: %s\n", oper, filename);
 	int locsocket = openudp(0);
 
 	struct sockaddr_in mysock;
@@ -99,7 +105,7 @@ void *connection(void *rmt_sckt_addr)
 	ack[1] = (uint16_t)0;
 	sendto(locsocket, ack, sizeof ack, 0, (struct sockaddr *)rmtsocket, sizeof rmtsocket);
 
-	free(rmt_sckt_addr);
+	free(args);
 	return NULL;
 }
 
