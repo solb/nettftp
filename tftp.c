@@ -42,7 +42,14 @@ int main(void)
 		else if(strncmp(buf, CMD_GET, len) == 0)
 			printf("file retrieval unimplemented\n");
 		else if(strncmp(buf, CMD_HLP, len) == 0)
-			printf("there's no helping you\n");
+		{
+			printf("Commands may be abbreviated.  Commands are:\n\n");
+			printf("%s\t\tconnect to remote tftp\n", CMD_CON);
+			printf("%s\t\tsend file\n", CMD_PUT);
+			printf("%s\t\treceive file\n", CMD_GET);
+			printf("%s\t\texit tftp\n", CMD_GFO);
+			printf("%s\t\tprint help information\n", CMD_HLP);
+		}
 		else if(strncmp(buf, CMD_GFO, len) != 0)
 			printf("%s: unknown directive\n", buf);
 	}
