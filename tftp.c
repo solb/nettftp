@@ -7,18 +7,46 @@
 
 typedef int bool;
 
+// Sex appeal:
+static const char *const SHL_PS1 = "tftp> ";
+
+// Interactive commands (must be wholly unambiguous):
+static const char *const CMD_CON = "connect";
+static const char *const CMD_PUT = "put";
+static const char *const CMD_GET = "get";
+static const char *const CMD_GFO = "quit";
+static const char *const CMD_HLP = "?";
+
 static void readin(char **, size_t *);
 
 int main(void)
 {
 	char *buf = malloc(1);
 	size_t cap = 1;
+	size_t len;
 
-	while(1)
+	do
 	{
-		readin(&buf, &cap);
-		printf("inp: %s\nlen: %lu\ncap: %lu\n\n", buf, strlen(buf), cap);
+		do
+		{
+			printf("%s", SHL_PS1);
+			readin(&buf, &cap);
+			len = strlen(buf);
+		}
+		while(!len);
+
+		if(strncmp(buf, CMD_CON, len) == 0)
+			printf("connection establishment unimplemented\n");
+		else if(strncmp(buf, CMD_PUT, len) == 0)
+			printf("file submission unimplemented\n");
+		else if(strncmp(buf, CMD_GET, len) == 0)
+			printf("file retrieval unimplemented\n");
+		else if(strncmp(buf, CMD_HLP, len) == 0)
+			printf("there's no helping you\n");
+		else if(strncmp(buf, CMD_GFO, len) != 0)
+			printf("%s: unknown directive\n", buf);
 	}
+	while(strncmp(buf, CMD_GFO, len) != 0);
 
 	free(buf);
 }
