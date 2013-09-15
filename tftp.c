@@ -1,6 +1,7 @@
 // Simple TFTP client implementation.
 // Author: Sol Boucher <slb1566@rit.edu>
 
+#include "tftp_protoc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,9 +22,12 @@ static void readin(char **, size_t *);
 
 int main(void)
 {
+	int sfd = openudp(0);
+
 	char *buf = malloc(1);
 	size_t cap = 1;
-	size_t len;
+	char *cmd; // First word of buf
+	size_t len; // Length of cmd
 
 	do
 	{
@@ -31,17 +35,31 @@ int main(void)
 		{
 			printf("%s", SHL_PS1);
 			readin(&buf, &cap);
-			len = strlen(buf);
+			cmd = strtok(buf, " ");
+			len = strlen(cmd);
 		}
 		while(!len);
 
-		if(strncmp(buf, CMD_CON, len) == 0)
-			printf("connection establishment unimplemented\n");
-		else if(strncmp(buf, CMD_PUT, len) == 0)
+		if(strncmp(cmd, CMD_CON, len) == 0)
+		{
+			const char *hostname = strtok(NULL, " "); // TODO Support direct IPs
+			const char *tmp = strtok(NULL, " ");
+			in_port_t port = PORT;
+			if(tmp)
+				port = atoi(tmp);
+
+			if(!hostname)
+			{
+				printf("USAGE: %s <hostname> [port]\n", CMD_CON);
+				printf("Required argument hostname not provided.\n");
+				continue;
+			}
+		}
+		else if(strncmp(cmd, CMD_PUT, len) == 0)
 			printf("file submission unimplemented\n");
-		else if(strncmp(buf, CMD_GET, len) == 0)
+		else if(strncmp(cmd, CMD_GET, len) == 0)
 			printf("file retrieval unimplemented\n");
-		else if(strncmp(buf, CMD_HLP, len) == 0)
+		else if(strncmp(cmd, CMD_HLP, len) == 0)
 		{
 			printf("Commands may be abbreviated.  Commands are:\n\n");
 			printf("%s\t\tconnect to remote tftp\n", CMD_CON);
@@ -50,10 +68,10 @@ int main(void)
 			printf("%s\t\texit tftp\n", CMD_GFO);
 			printf("%s\t\tprint help information\n", CMD_HLP);
 		}
-		else if(strncmp(buf, CMD_GFO, len) != 0)
-			printf("%s: unknown directive\n", buf);
+		else if(strncmp(cmd, CMD_GFO, len) != 0)
+			printf("%s: unknown directive\n", cmd);
 	}
-	while(strncmp(buf, CMD_GFO, len) != 0);
+	while(strncmp(cmd, CMD_GFO, len) != 0);
 
 	free(buf);
 }
