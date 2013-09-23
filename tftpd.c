@@ -39,7 +39,7 @@ int main(void)
 		printf("xfermode: %s\n", mode);
 		putchar('\n');
 
-		if((opcode == OPC_RRQ || opcode == OPC_WRQ) && req_len-1 == 2+fname_len+1+mode_len+1)
+		if((opcode == OPC_RRQ || opcode == OPC_WRQ) && req_len == 2+fname_len+1+mode_len+1)
 		{
 			pthread_t thread;
 			void *actuals = malloc(sktaddrmt_len+2+fname_len+1);
@@ -49,7 +49,7 @@ int main(void)
 			pthread_create(&thread, NULL, &connection, actuals);
 		}
 		else
-			printf("bad: %ld != %ld\n", req_len-1, 2+fname_len+1+mode_len+1);
+			printf("bad: %ld != %ld\n", req_len, 2+fname_len+1+mode_len+1); // TODO Send actual ERR packet
 
 		if(request)
 			free(request);
