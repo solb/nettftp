@@ -2,6 +2,7 @@
 // Author: Sol Boucher <slb1566@rit.edu>
 
 #include "tftp_protoc.h"
+#include <fcntl.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,14 +72,48 @@ int main(void)
 			if(getaddrinfo(hostname, NULL, &hints, &server))
 				handle_error("getaddrinfo()");
 			((struct sockaddr_in *)server->ai_addr)->sin_port = htons(port);
-
-			printf("%ld\n", sendto(sfd, "garbage", 7, 0, server->ai_addr, sizeof(struct sockaddr_in)));
-			perror("silly");
 		}
 		else if(strncmp(cmd, CMD_PUT, len) == 0)
 			printf("file submission unimplemented\n");
 		else if(strncmp(cmd, CMD_GET, len) == 0)
-			printf("file retrieval unimplemented\n");
+		{
+			const char *pathname = strtok(NULL, " ");
+			if(!pathname)
+			{
+				printf("USAGE: %s <pathname>\n", CMD_GET);
+				printf("Required argument pathname not provided.\n");
+				continue;
+			}
+
+			if(!server)
+			{
+				printf("%s: expects existing connection\n", cmd);
+				printf("Did you call %s?\n", CMD_CON);
+				continue;
+			}
+
+			uint8_t req[2+strlen(pathname)+1+strlen(MODE_OCTET)+1];
+			*(uint16_t *)req = OPC_RRQ;
+			memcpy(req+2, pathname, strlen(pathname)+1);
+			memcpy(req+2+strlen(pathname)+1, MODE_OCTET, strlen(MODE_OCTET)+1);
+			sendto(sfd, req, sizeof req, 0, server->ai_addr, sizeof(struct sockaddr_in));
+
+			int fd;
+			if((fd = open(pathname, O_WRONLY|O_CREAT|O_EXCL)) < 0)
+				handle_error("open()"); // TODO Be user-friendly
+
+			ssize_t msg_len;
+			do
+			{
+				uint16_t *inc = recvpkt(sfd, &msg_len);
+				if(msg_len > 4)
+					write(fd, inc+2, msg_len-4);
+				// TODO Send ACK
+			}
+			while(msg_len == 4+DATA_LEN);
+
+			close(fd);
+		}
 		else if(strncmp(cmd, CMD_HLP, len) == 0)
 		{
 			printf("Commands may be abbreviated.  Commands are:\n\n");

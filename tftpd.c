@@ -2,6 +2,7 @@
 // Author: Sol Boucher <slb1566@rit.edu>
 
 #include "tftp_protoc.h"
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,13 +73,36 @@ void *connection(void *args)
 	struct sockaddr_in mysock;
 	socklen_t mysck_len = sizeof mysock;
 	getsockname(locsocket, (struct sockaddr *)&mysock, &mysck_len);
-	printf("%hu\n", ntohs(mysock.sin_port)); // TODO Remove all this if unused
+	printf("server: %hu\n", ntohs(mysock.sin_port)); // TODO Remove all this if unused
+	printf("client: %hu\n", ntohs(rmtsocket->sin_port));
 
-	uint16_t ack[2]; // TODO Send DATA instead for RRQs
-	ack[0] = OPC_ACK;
-	ack[1] = (uint16_t)0;
-	sendto(locsocket, ack, sizeof ack, 0, (struct sockaddr *)rmtsocket, sizeof rmtsocket);
+	int fd;
+	if((fd = open(filename, oper == OPC_WRQ ? O_WRONLY|O_CREAT|O_EXCL : O_RDONLY)) < 0)
+		handle_error("open()"); // TODO Send actual ERR packet
 
+	if(oper == OPC_RRQ)
+	{
+		uint16_t *buf = malloc(4+DATA_LEN);
+		buf[0] = OPC_DAT;
+		buf[1] = 0; // Block ID
+		int len = DATA_LEN;
+
+		for(buf[1] = 0; len == DATA_LEN; ++buf[1])
+		{
+			len = read(fd, buf+2, DATA_LEN);
+			sendto(locsocket, buf, 4+len, 0, (struct sockaddr *)rmtsocket, rmtskt_len);
+			// TODO Await ACK
+		}
+	}
+	else // oper == OPC_WRQ
+	{
+		uint16_t ack[2];
+		ack[0] = OPC_ACK;
+		ack[1] = (uint16_t)0;
+		sendto(locsocket, ack, sizeof ack, 0, (struct sockaddr *)rmtsocket, rmtskt_len);
+	}
+
+	close(fd);
 	free(args);
 	return NULL;
 }

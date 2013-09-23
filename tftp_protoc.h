@@ -8,6 +8,7 @@
 
 // Connection parameters:
 const in_port_t PORT;
+const size_t DATA_LEN;
 
 // Protocol details:
 const uint16_t OPC_RRQ;

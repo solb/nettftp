@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 const in_port_t PORT = 1069;
+const size_t DATA_LEN = 512;
 
 const uint16_t OPC_RRQ = 1;
 const uint16_t OPC_WRQ = 2;
