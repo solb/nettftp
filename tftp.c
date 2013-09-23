@@ -2,6 +2,7 @@
 // Author: Sol Boucher <slb1566@rit.edu>
 
 #include "tftp_protoc.h"
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,13 @@ static void readin(char **, size_t *);
 
 int main(void)
 {
+	struct addrinfo hints;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET; // TODO IPv6 suppor
+	hints.ai_socktype = SOCK_DGRAM;
+
 	int sfd = openudp(0);
+	struct addrinfo *server = NULL;
 
 	char *buf = malloc(1);
 	size_t cap = 1;
@@ -54,6 +61,19 @@ int main(void)
 				printf("Required argument hostname not provided.\n");
 				continue;
 			}
+
+			if(server)
+			{
+				freeaddrinfo(server);
+				server = NULL;
+			}
+
+			if(getaddrinfo(hostname, NULL, &hints, &server))
+				handle_error("getaddrinfo()");
+			((struct sockaddr_in *)server->ai_addr)->sin_port = htons(port);
+
+			printf("%ld\n", sendto(sfd, "garbage", 7, 0, server->ai_addr, sizeof(struct sockaddr_in)));
+			perror("silly");
 		}
 		else if(strncmp(cmd, CMD_PUT, len) == 0)
 			printf("file submission unimplemented\n");
@@ -74,6 +94,8 @@ int main(void)
 	while(strncmp(cmd, CMD_GFO, len) != 0);
 
 	free(buf);
+	if(server)
+		freeaddrinfo(server);
 }
 
 void readin(char **bufptr, size_t *bufcap)
