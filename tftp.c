@@ -21,6 +21,8 @@ static const char *const CMD_GFO = "quit";
 static const char *const CMD_HLP = "?";
 
 static void readin(char **, size_t *);
+static void usage(const char *, const char *, const char *);
+static void noconn(const char *);
 static void sendreq(int, const char*, int, struct sockaddr *);
 
 int main(void)
@@ -59,11 +61,9 @@ int main(void)
 
 			if(!hostname)
 			{
-				printf("USAGE: %s <hostname> [port]\n", CMD_CON);
-				printf("Required argument hostname not provided.\n");
+				usage(CMD_CON, "hostname", "port");
 				continue;
 			}
-
 			if(server)
 			{
 				freeaddrinfo(server);
@@ -71,7 +71,7 @@ int main(void)
 			}
 
 			if(getaddrinfo(hostname, NULL, &hints, &server))
-				handle_error("getaddrinfo()");
+				handle_error("getaddrinfo()"); // TODO Handle failed lookups
 			((struct sockaddr_in *)server->ai_addr)->sin_port = htons(port);
 		}
 		else if(strncmp(cmd, CMD_PUT, len) == 0)
@@ -81,15 +81,12 @@ int main(void)
 			const char *pathname = strtok(NULL, " ");
 			if(!pathname)
 			{
-				printf("USAGE: %s <pathname>\n", CMD_GET);
-				printf("Required argument pathname not provided.\n");
+				usage(CMD_GET, "pathname", NULL);
 				continue;
 			}
-
 			if(!server)
 			{
-				printf("%s: expects existing connection\n", cmd);
-				printf("Did you call %s?\n", CMD_CON);
+				noconn(cmd);
 				continue;
 			}
 
@@ -159,6 +156,23 @@ void readin(char **bufptr, size_t *bufcap)
 		*bufptr = buf;
 		*bufcap = *bufcap*2;
 	}
+}
+
+void usage(const char *cmd, const char *reqd, const char *optl)
+{
+	char trailer[optl ? strlen(optl)+4 : 1];
+	trailer[0] = '\0';
+	if(optl)
+		sprintf(trailer, " [%s]", optl);
+
+	printf("USAGE: %s <%s>%s\n", cmd, reqd, trailer);
+	printf("Required argument %s not provided.\n", reqd);
+}
+
+void noconn(const char *typed)
+{
+	printf("%s: expects existing connection\n", typed);
+	printf("Did you call %s?\n", CMD_CON);
 }
 
 void sendreq(int sfd, const char* pathname, int opcode, struct sockaddr *dest)
