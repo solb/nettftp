@@ -50,7 +50,7 @@ int main(void)
 			pthread_create(&thread, NULL, &connection, actuals);
 		}
 		else
-			printf("bad: %ld != %ld\n", req_len, 2+fname_len+1+mode_len+1); // TODO Send actual ERR packet
+			senderr(socketfd, ERR_ILLEGALOPER, &saddr_remote);
 
 		if(request)
 			free(request);
@@ -75,10 +75,15 @@ void *connection(void *args)
 	getsockname(locsocket, (struct sockaddr *)&mysock, &mysck_len);
 	printf("server: %hu\n", ntohs(mysock.sin_port)); // TODO Remove all this if unused
 	printf("client: %hu\n", ntohs(rmtsocket->sin_port));
+	putchar('\n');
 
 	int fd;
 	if((fd = open(filename, oper == OPC_WRQ ? O_WRONLY|O_CREAT|O_EXCL : O_RDONLY, 0666)) < 0)
-		handle_error("open()"); // TODO Send actual ERR packet
+	{
+		diagerrno(locsocket, rmtsocket);
+		free(args);
+		return NULL;
+	}
 
 	if(oper == OPC_RRQ)
 	{

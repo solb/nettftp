@@ -4,6 +4,7 @@
 #include "tftp_protoc.h"
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 const in_port_t PORT = 1069;
 const size_t DATA_LEN = 512;
@@ -62,6 +63,66 @@ void *recvpkta(int sfd, ssize_t *msg_len, struct sockaddr_in *rmt_saddr, socklen
 	if(recv(sfd, msg, *msg_len, 0) <= 0)
 		handle_error("recv()");
 	return msg;
+}
+
+void diagerrno(int sfd, struct sockaddr_in *dest)
+{
+	switch(errno)
+	{
+		case ENOENT:
+			senderr(sfd, ERR_NOTFOUND, dest);
+			break;
+		case EACCES:
+		case EROFS:
+			senderr(sfd, ERR_ACCESSDENIED, dest);
+			break;
+		case EFBIG:
+		case ENOSPC:
+			senderr(sfd, ERR_DISKFULL, dest);
+			break;
+		case EEXIST:
+			senderr(sfd, ERR_CLOBBER, dest);
+			break;
+		default:
+			senderr(sfd, ERR_UNKNOWN, dest);
+	}
+}
+
+void senderr(int sfd, int ercode, struct sockaddr_in *dest)
+{
+	uint8_t err[5];
+	*(uint16_t *)err = OPC_ERR;
+	*(uint16_t *)(err+2) = ercode;
+	err[4] = 0;
+	sendto(sfd, err, sizeof err, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
+}
+
+int iserr(void *payload)
+{
+	return *(uint16_t *)payload == OPC_ERR;
+}
+
+const char *strerr(void *payload)
+{
+	uint16_t code = ((uint16_t *)payload)[1];
+	if(code == ERR_UNKNOWN)
+		return "Unknown error";
+	else if(ERR_NOTFOUND)
+		return "File not found";
+	else if(ERR_ACCESSDENIED)
+		return "Access denied";
+	else if(ERR_DISKFULL)
+		return "Disk full";
+	else if(ERR_ILLEGALOPER)
+		return "Illegal operation";
+	else if(ERR_UNKNOWNTID)
+		return "Unrecognized transfer";
+	else if(ERR_CLOBBER)
+		return "File already exists";
+	else if(ERR_UNKNOWNUSER)
+		return "Unknown user";
+	else
+		return "Inexcusable error";
 }
 
 void handle_error(const char *desc)

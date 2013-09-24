@@ -100,6 +100,14 @@ int main(void)
 			do
 			{
 				uint16_t *inc = recvpkt(sfd, &msg_len);
+
+				if(iserr(inc))
+				{
+					printf("%s\n", strerr(inc));
+					unlink(pathname);
+					break;
+				}
+
 				if(msg_len > 4)
 					write(fd, inc+2, msg_len-4);
 				// TODO Send ACK

@@ -31,6 +31,10 @@ const uint16_t ERR_UNKNOWNUSER;
 int openudp(uint16_t);
 void *recvpkt(int, ssize_t *);
 void *recvpkta(int, ssize_t *, struct sockaddr_in *, socklen_t *);
+void diagerrno(int, struct sockaddr_in *);
+void senderr(int, int, struct sockaddr_in *);
+int iserr(void *);
+const char *strerr(void *);
 void handle_error(const char *);
 
 #endif
