@@ -3,6 +3,7 @@
 
 #include "tftp_protoc.h"
 #include <fcntl.h>
+#include <libgen.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,7 +79,7 @@ int main(void)
 			printf("file submission unimplemented\n");
 		else if(strncmp(cmd, CMD_GET, len) == 0)
 		{
-			const char *pathname = strtok(NULL, " ");
+			char *pathname = strtok(NULL, " ");
 			if(!pathname)
 			{
 				usage(CMD_GET, "pathname", NULL);
@@ -92,8 +93,8 @@ int main(void)
 
 			sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
 
-			int fd;
-			if((fd = open(pathname, O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
+			int fd = -1;
+			if((fd = open(basename(pathname), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
 				handle_error("open()"); // TODO Be user-friendly
 
 			ssize_t msg_len;
@@ -104,7 +105,9 @@ int main(void)
 				if(iserr(inc))
 				{
 					printf("%s\n", strerr(inc));
-					unlink(pathname);
+					close(fd);
+					fd = -1;
+					unlink(basename(pathname));
 					break;
 				}
 
@@ -114,7 +117,8 @@ int main(void)
 			}
 			while(msg_len == 4+DATA_LEN);
 
-			close(fd);
+			if(fd >= 0)
+				close(fd);
 		}
 		else if(strncmp(cmd, CMD_HLP, len) == 0)
 		{
