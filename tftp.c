@@ -21,6 +21,7 @@ static const char *const CMD_GFO = "quit";
 static const char *const CMD_HLP = "?";
 
 static void readin(char **, size_t *);
+static void sendreq(int, const char*, int, struct sockaddr *);
 
 int main(void)
 {
@@ -92,11 +93,7 @@ int main(void)
 				continue;
 			}
 
-			uint8_t req[2+strlen(pathname)+1+strlen(MODE_OCTET)+1];
-			*(uint16_t *)req = OPC_RRQ;
-			memcpy(req+2, pathname, strlen(pathname)+1);
-			memcpy(req+2+strlen(pathname)+1, MODE_OCTET, strlen(MODE_OCTET)+1);
-			sendto(sfd, req, sizeof req, 0, server->ai_addr, sizeof(struct sockaddr_in));
+			sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
 
 			int fd;
 			if((fd = open(pathname, O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
@@ -162,4 +159,13 @@ void readin(char **bufptr, size_t *bufcap)
 		*bufptr = buf;
 		*bufcap = *bufcap*2;
 	}
+}
+
+void sendreq(int sfd, const char* pathname, int opcode, struct sockaddr *dest)
+{
+	uint8_t req[2+strlen(pathname)+1+strlen(MODE_OCTET)+1];
+	*(uint16_t *)req = opcode;
+	memcpy(req+2, pathname, strlen(pathname)+1);
+	memcpy(req+2+strlen(pathname)+1, MODE_OCTET, strlen(MODE_OCTET)+1);
+	sendto(sfd, req, sizeof req, 0, dest, sizeof(struct sockaddr_in));
 }
