@@ -77,7 +77,7 @@ void *connection(void *args)
 	printf("client: %hu\n", ntohs(rmtsocket->sin_port));
 
 	int fd;
-	if((fd = open(filename, oper == OPC_WRQ ? O_WRONLY|O_CREAT|O_EXCL : O_RDONLY)) < 0)
+	if((fd = open(filename, oper == OPC_WRQ ? O_WRONLY|O_CREAT|O_EXCL : O_RDONLY, 0666)) < 0)
 		handle_error("open()"); // TODO Send actual ERR packet
 
 	if(oper == OPC_RRQ)

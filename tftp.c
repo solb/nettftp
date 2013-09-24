@@ -99,7 +99,7 @@ int main(void)
 			sendto(sfd, req, sizeof req, 0, server->ai_addr, sizeof(struct sockaddr_in));
 
 			int fd;
-			if((fd = open(pathname, O_WRONLY|O_CREAT|O_EXCL)) < 0)
+			if((fd = open(pathname, O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
 				handle_error("open()"); // TODO Be user-friendly
 
 			ssize_t msg_len;
