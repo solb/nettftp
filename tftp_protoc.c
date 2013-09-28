@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-const in_port_t PORT = 1069;
+const in_port_t PORT_PRIVILEGED = 69;
+const in_port_t PORT_UNPRIVILEGED = 1069;
 const size_t DATA_LEN = 512;
 
 const uint16_t OPC_RRQ = 1;
@@ -35,10 +36,10 @@ int openudp(uint16_t port)
 	// Bind to interface port:
 	struct sockaddr_in saddr_local;
 	saddr_local.sin_family = AF_INET;
-	saddr_local.sin_port = htons(port); // TODO Try privileged port, then fall back
+	saddr_local.sin_port = htons(port);
 	saddr_local.sin_addr.s_addr = INADDR_ANY;
 	if(bind(socketfd, (struct sockaddr *)&saddr_local, sizeof saddr_local))
-		handle_error("bind()");
+		return -1;
 
 	return socketfd;
 }

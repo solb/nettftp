@@ -33,8 +33,10 @@ int main(void)
 	hints.ai_family = AF_INET; // TODO IPv6 support
 	hints.ai_socktype = SOCK_DGRAM;
 
-	int sfd = openudp(0);
 	struct addrinfo *server = NULL;
+	int sfd = openudp(0);
+	if(sfd < 0)
+		handle_error("bind()");
 
 	char *buf = malloc(1);
 	size_t cap = 1;
@@ -56,7 +58,7 @@ int main(void)
 		{
 			const char *hostname = strtok(NULL, " ");
 			const char *tmp = strtok(NULL, " ");
-			in_port_t port = PORT;
+			in_port_t port = PORT_UNPRIVILEGED;
 			if(tmp)
 				port = atoi(tmp);
 

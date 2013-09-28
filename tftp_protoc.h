@@ -7,7 +7,8 @@
 #include <netinet/in.h>
 
 // Connection parameters:
-const in_port_t PORT;
+const in_port_t PORT_PRIVILEGED;
+const in_port_t PORT_UNPRIVILEGED;
 const size_t DATA_LEN;
 
 // Protocol details:

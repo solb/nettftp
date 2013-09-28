@@ -12,7 +12,13 @@ static void strtolower(char *, size_t);
 
 int main(void)
 {
-	int socketfd = openudp(PORT);
+	int socketfd = openudp(PORT_PRIVILEGED);
+	if(socketfd < 0)
+	{
+		socketfd = openudp(PORT_UNPRIVILEGED);
+		if(socketfd < 0)
+			handle_error("bind()");
+	}
 
 	while(1)
 	{
@@ -65,6 +71,8 @@ void *connection(void *args)
 	uint16_t oper = *(uint16_t *)(args+rmtskt_len);
 	char *filename = (char *)(args+rmtskt_len+2);
 	int locsocket = openudp(0);
+	if(locsocket < 0)
+		handle_error("bind()");
 
 #ifdef DEBUG
 	fprintf(stderr, "spawned a thread!\n");
