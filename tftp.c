@@ -89,13 +89,19 @@ int main(void)
 				continue;
 			}
 
-			uint8_t rmtack[4];
-			uint8_t *rmtack_ptr;
-			ssize_t rmak_len;
 			struct sockaddr_in dest_addr;
 			socklen_t dest_adln;
 			sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
-			rmtack_ptr = recvpkta(sfd, &rmak_len, &dest_addr, &dest_adln);
+
+			ssize_t rmak_len;
+			uint8_t *rmtack = recvpkta(sfd, &rmak_len, &dest_addr, &dest_adln);
+			if(iserr(rmtack))
+			{
+				printf("%s\n", strerr(rmtack));
+				free(rmtack);
+				continue;
+			}
+			free(rmtack);
 
 			int fd;
 			if((fd = open(pathname, O_RDONLY)) < 0)

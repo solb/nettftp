@@ -72,30 +72,38 @@ void sendfile(int sfd, int fd, struct sockaddr_in *dest)
 	buf[1] = 0; // Block ID
 	int len = DATA_LEN;
 
+	ssize_t msg_len;
 	for(buf[1] = 0; len == DATA_LEN; ++buf[1])
 	{
 		len = read(fd, buf+2, DATA_LEN);
 		sendto(sfd, buf, 4+len, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
-		// TODO Await ACK, return any error
+
+		// Make sure something (hopefully an ACK) arrives
+		uint16_t *resp = recvpkt(sfd, &msg_len);
+		free(resp);
 	}
 }
 
 const char *recvfile(int sfd, int fd)
 {
 	ssize_t msg_len;
+	struct sockaddr_in rsa;
+	socklen_t rln;
 	do
 	{
-		uint16_t *inc = recvpkt(sfd, &msg_len);
+		uint16_t *inc = recvpkta(sfd, &msg_len, &rsa, &rln);
 
 		if(iserr(inc))
 		{
+			const char *desc = strerr(inc);
 			free(inc);
-			return strerr(inc);
+			return desc;
 		}
 
 		if(msg_len > 4)
 			write(fd, inc+2, msg_len-4);
-		// TODO Send ACK
+		sendack(sfd, inc[1], &rsa);
+
 		free(inc);
 	}
 	while(msg_len == 4+DATA_LEN);
