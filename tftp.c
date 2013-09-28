@@ -79,7 +79,7 @@ int main(void)
 			printf("file submission unimplemented\n");
 		else if(strncmp(cmd, CMD_GET, len) == 0)
 		{
-			char *pathname = strtok(NULL, " ");
+			char *pathname = strtok(NULL, "");
 			if(!pathname)
 			{
 				usage(CMD_GET, "pathname", NULL);
