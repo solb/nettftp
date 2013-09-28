@@ -95,8 +95,10 @@ int main(void)
 			}
 			((struct sockaddr_in *)server->ai_addr)->sin_port = htons(port);
 		}
-		else if(strncmp(cmd, CMD_PUT, len) == 0)
+		else if(strncmp(cmd, CMD_GET, len) == 0 || strncmp(cmd, CMD_PUT, len) == 0)
 		{
+			bool putting = strncmp(cmd, CMD_PUT, 1) == 0;
+
 			// Ensure we're already connected to a server:
 			if(!server)
 			{
@@ -108,72 +110,56 @@ int main(void)
 			char *pathname = strtok(NULL, "");
 			if(!pathname)
 			{
-				usage(CMD_PUT, "pathname", NULL);
+				usage(putting ? CMD_PUT : CMD_GET, "pathname", NULL);
 				continue;
 			}
 
-			// Try opening the file for reading:
 			int fd;
-			if((fd = open(pathname, O_RDONLY)) < 0)
+			if(putting)
 			{
-				fprintf(stderr, "local: Unable to read specified file\n");
-				continue;
-			}
+				// Try opening the file for reading:
+				if((fd = open(pathname, O_RDONLY)) < 0)
+				{
+					fprintf(stderr, "local: Unable to read specified file\n");
+					continue;
+				}
 
-			// Send a request and record the port used to acknowledge:
-			struct sockaddr_in dest_addr;
-			sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
-			uint8_t *rmtack = recvpkta(sfd, &dest_addr);
-			if(iserr(rmtack))
-			{
-				fprintf(stderr, "remote: %s\n", strerr(rmtack));
+				// Send a request and record the port used to acknowledge:
+				struct sockaddr_in dest_addr;
+				sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
+				uint8_t *rmtack = recvpkta(sfd, &dest_addr);
+				if(iserr(rmtack))
+				{
+					fprintf(stderr, "remote: %s\n", strerr(rmtack));
+					free(rmtack);
+					continue;
+				}
 				free(rmtack);
-				continue;
+
+				// Transmit the file:
+				sendfile(sfd, fd, &dest_addr);
 			}
-			free(rmtack);
-
-			// Transmit the file:
-			sendfile(sfd, fd, &dest_addr);
-
-			if(fd >= 0)
-				close(fd);
-		}
-		else if(strncmp(cmd, CMD_GET, len) == 0)
-		{
-			// Ensure we're already connected to a server:
-			if(!server)
+			else // getting
 			{
-				noconn(cmd);
-				continue;
-			}
+				// Try opening a file of that name for writing:
+				char filename[strlen(pathname)+1];
+				memcpy(filename, pathname, sizeof filename);
+				if((fd = open(basename(filename), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
+				{
+					fprintf(stderr, "local: Unable to create the new file\n");
+					continue;
+				}
 
-			// Make sure we were given a path argument:
-			char *pathname = strtok(NULL, "");
-			if(!pathname)
-			{
-				usage(CMD_GET, "pathname", NULL);
-				continue;
-			}
-
-			// Try opening a file of that name for writing:
-			char filename[strlen(pathname)+1];
-			memcpy(filename, pathname, sizeof filename);
-			int fd;
-			if((fd = open(basename(filename), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
-			{
-				fprintf(stderr, "local: Unable to create the new file\n");
-				continue;
-			}
-
-			// Send a request and await the incoming file:
-			sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
-			const char *res = recvfile(sfd, fd);
-			if(res)
-			{
-				fprintf(stderr, "remote: %s\n", res);
-				close(fd);
-				fd = -1;
-				unlink(basename(filename));
+				// Send a request and await the incoming file:
+				sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
+				const char *res = recvfile(sfd, fd);
+				if(res)
+				{
+					fprintf(stderr, "remote: %s\n", res);
+					close(fd);
+					fd = -1;
+					unlink(basename(filename));
+				}
 			}
 
 			if(fd >= 0)
@@ -189,7 +175,10 @@ int main(void)
 			printf("%s\t\tprint help information\n", CMD_HLP);
 		}
 		else if(strncmp(cmd, CMD_GFO, len) != 0)
+		{
 			fprintf(stderr, "%s: unknown directive\n", cmd);
+			fprintf(stderr, "Try ? for help.\n");
+		}
 	}
 	while(strncmp(cmd, CMD_GFO, len) != 0);
 
