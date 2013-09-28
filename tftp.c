@@ -30,7 +30,7 @@ int main(void)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET; // TODO IPv6 suppor
+	hints.ai_family = AF_INET; // TODO IPv6 support
 	hints.ai_socktype = SOCK_DGRAM;
 
 	int sfd = openudp(0);
@@ -54,7 +54,7 @@ int main(void)
 
 		if(strncmp(cmd, CMD_CON, len) == 0)
 		{
-			const char *hostname = strtok(NULL, " "); // TODO Support direct IPs
+			const char *hostname = strtok(NULL, " ");
 			const char *tmp = strtok(NULL, " ");
 			in_port_t port = PORT;
 			if(tmp)
@@ -72,7 +72,13 @@ int main(void)
 			}
 
 			if(getaddrinfo(hostname, NULL, &hints, &server))
-				handle_error("getaddrinfo()"); // TODO Handle failed lookups
+			{
+				printf("Unable to resolve hostname\n");
+				freeaddrinfo(server);
+				server = NULL;
+				continue;
+			}
+
 			((struct sockaddr_in *)server->ai_addr)->sin_port = htons(port);
 		}
 		else if(strncmp(cmd, CMD_PUT, len) == 0)
@@ -89,6 +95,13 @@ int main(void)
 				continue;
 			}
 
+			int fd;
+			if((fd = open(pathname, O_RDONLY)) < 0)
+			{
+				printf("local: Unable to read specified file\n");
+				continue;
+			}
+
 			struct sockaddr_in dest_addr;
 			socklen_t dest_adln;
 			sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
@@ -97,15 +110,11 @@ int main(void)
 			uint8_t *rmtack = recvpkta(sfd, &rmak_len, &dest_addr, &dest_adln);
 			if(iserr(rmtack))
 			{
-				printf("%s\n", strerr(rmtack));
+				printf("remote: %s\n", strerr(rmtack));
 				free(rmtack);
 				continue;
 			}
 			free(rmtack);
-
-			int fd;
-			if((fd = open(pathname, O_RDONLY)) < 0)
-				handle_error("open()"); // TODO Be user-friendly
 
 			sendfile(sfd, fd, &dest_addr);
 
@@ -126,19 +135,23 @@ int main(void)
 				continue;
 			}
 
-			sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
-
+			char filename[strlen(pathname)+1];
+			memcpy(filename, pathname, sizeof filename);
 			int fd;
-			if((fd = open(basename(pathname), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
-				handle_error("open()"); // TODO Be user-friendly
+			if((fd = open(basename(filename), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
+			{
+				printf("local: Unable to create the new file\n");
+				continue;
+			}
 
+			sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
 			const char *res = recvfile(sfd, fd);
 			if(res)
 			{
-				printf("%s\n", res);
+				printf("remote: %s\n", res);
 				close(fd);
 				fd = -1;
-				unlink(basename(pathname));
+				unlink(basename(filename));
 			}
 
 			if(fd >= 0)
