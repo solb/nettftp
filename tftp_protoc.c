@@ -88,15 +88,27 @@ const char *recvfile(int sfd, int fd)
 		uint16_t *inc = recvpkt(sfd, &msg_len);
 
 		if(iserr(inc))
+		{
+			free(inc);
 			return strerr(inc);
+		}
 
 		if(msg_len > 4)
 			write(fd, inc+2, msg_len-4);
 		// TODO Send ACK
+		free(inc);
 	}
 	while(msg_len == 4+DATA_LEN);
 
 	return NULL;
+}
+
+void sendack(int sfd, uint16_t blknum, struct sockaddr_in *dest)
+{
+	uint16_t ack[2];
+	ack[0] = OPC_ACK;
+	ack[1] = blknum;
+	sendto(sfd, ack, sizeof ack, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
 }
 
 void diagerrno(int sfd, struct sockaddr_in *dest)
@@ -122,7 +134,7 @@ void diagerrno(int sfd, struct sockaddr_in *dest)
 	}
 }
 
-void senderr(int sfd, int ercode, struct sockaddr_in *dest)
+void senderr(int sfd, uint16_t ercode, struct sockaddr_in *dest)
 {
 	uint8_t err[5];
 	*(uint16_t *)err = OPC_ERR;

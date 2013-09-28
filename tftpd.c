@@ -89,11 +89,7 @@ void *connection(void *args)
 		sendfile(locsocket, fd, rmtsocket);
 	else // oper == OPC_WRQ
 	{
-		uint16_t ack[2];
-		ack[0] = OPC_ACK;
-		ack[1] = (uint16_t)0;
-		sendto(locsocket, ack, sizeof ack, 0, (struct sockaddr *)rmtsocket, rmtskt_len);
-
+		sendack(locsocket, 0, rmtsocket);
 		recvfile(locsocket, fd);
 	}
 
