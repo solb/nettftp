@@ -114,6 +114,10 @@ int main(void)
 				continue;
 			}
 
+			// Since basename() might modify pathname, copy it:
+			char filename[strlen(pathname)+1];
+			memcpy(filename, pathname, sizeof filename);
+
 			int fd;
 			if(putting)
 			{
@@ -126,7 +130,7 @@ int main(void)
 
 				// Send a request and record the port used to acknowledge:
 				struct sockaddr_in dest_addr;
-				sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
+				sendreq(sfd, basename(filename), OPC_WRQ, server->ai_addr);
 				uint8_t *rmtack = recvpkta(sfd, &dest_addr);
 				if(iserr(rmtack))
 				{
@@ -142,8 +146,6 @@ int main(void)
 			else // getting
 			{
 				// Try opening a file of that name for writing:
-				char filename[strlen(pathname)+1];
-				memcpy(filename, pathname, sizeof filename);
 				if((fd = open(basename(filename), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
 				{
 					fprintf(stderr, "local: Unable to create the new file\n");
