@@ -161,19 +161,19 @@ const char *strerr(void *payload)
 	uint16_t code = ((uint16_t *)payload)[1];
 	if(code == ERR_UNKNOWN)
 		return "Unknown error";
-	else if(ERR_NOTFOUND)
+	else if(code == ERR_NOTFOUND)
 		return "File not found";
-	else if(ERR_ACCESSDENIED)
+	else if(code == ERR_ACCESSDENIED)
 		return "Access denied";
-	else if(ERR_DISKFULL)
+	else if(code == ERR_DISKFULL)
 		return "Disk full";
-	else if(ERR_ILLEGALOPER)
+	else if(code == ERR_ILLEGALOPER)
 		return "Illegal operation";
-	else if(ERR_UNKNOWNTID)
+	else if(code == ERR_UNKNOWNTID)
 		return "Unrecognized transfer";
-	else if(ERR_CLOBBER)
+	else if(code == ERR_CLOBBER)
 		return "File already exists";
-	else if(ERR_UNKNOWNUSER)
+	else if(code == ERR_UNKNOWNUSER)
 		return "Unknown user";
 	else
 		return "Inexcusable error";
