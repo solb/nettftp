@@ -32,7 +32,7 @@ int main(void)
 	// Used to control DNS resolution requests:
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET; // TODO IPv6 support
+	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_DGRAM;
 
 	// Bind to an ephemeral network port:

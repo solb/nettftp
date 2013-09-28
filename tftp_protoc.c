@@ -4,7 +4,6 @@
 #include "tftp_protoc.h"
 #include <errno.h>
 #include <stdlib.h>
-#include <string.h>
 
 const in_port_t PORT_PRIVILEGED = 69;
 const in_port_t PORT_UNPRIVILEGED = 1069;
@@ -33,7 +32,7 @@ int openudp(uint16_t port)
 {
 	// Open UDP socket over IP:
 	int socketfd;
-	if((socketfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) // TODO IPv6 support
+	if((socketfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		handle_error("socket()");
 
 	// Bind to interface port:
