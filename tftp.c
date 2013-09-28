@@ -93,20 +93,22 @@ int main(void)
 				server = NULL;
 				continue;
 			}
-
 			((struct sockaddr_in *)server->ai_addr)->sin_port = htons(port);
 		}
 		else if(strncmp(cmd, CMD_PUT, len) == 0)
 		{
+			// Ensure we're already connected to a server:
+			if(!server)
+			{
+				noconn(cmd);
+				continue;
+			}
+
+			// Make sure we were given a path argument:
 			char *pathname = strtok(NULL, "");
 			if(!pathname)
 			{
 				usage(CMD_PUT, "pathname", NULL);
-				continue;
-			}
-			if(!server)
-			{
-				noconn(cmd);
 				continue;
 			}
 
@@ -138,15 +140,18 @@ int main(void)
 		}
 		else if(strncmp(cmd, CMD_GET, len) == 0)
 		{
+			// Ensure we're already connected to a server:
+			if(!server)
+			{
+				noconn(cmd);
+				continue;
+			}
+
+			// Make sure we were given a path argument:
 			char *pathname = strtok(NULL, "");
 			if(!pathname)
 			{
 				usage(CMD_GET, "pathname", NULL);
-				continue;
-			}
-			if(!server)
-			{
-				noconn(cmd);
 				continue;
 			}
 
