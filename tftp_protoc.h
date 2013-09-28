@@ -29,8 +29,9 @@ const uint16_t ERR_UNKNOWNUSER;
 
 // Utility functions:
 int openudp(uint16_t);
-void *recvpkt(int, ssize_t *);
-void *recvpkta(int, ssize_t *, struct sockaddr_in *, socklen_t *);
+void *recvpkt(int);
+void *recvpkta(int, struct sockaddr_in *);
+void *recvpktal(int, size_t *, struct sockaddr_in *);
 void sendfile(int, int, struct sockaddr_in *);
 const char *recvfile(int, int);
 void sendack(int, uint16_t, struct sockaddr_in *);

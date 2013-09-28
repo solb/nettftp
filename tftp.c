@@ -103,11 +103,8 @@ int main(void)
 			}
 
 			struct sockaddr_in dest_addr;
-			socklen_t dest_adln;
 			sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
-
-			ssize_t rmak_len;
-			uint8_t *rmtack = recvpkta(sfd, &rmak_len, &dest_addr, &dest_adln);
+			uint8_t *rmtack = recvpkta(sfd, &dest_addr);
 			if(iserr(rmtack))
 			{
 				printf("remote: %s\n", strerr(rmtack));

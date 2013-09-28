@@ -17,18 +17,13 @@ int main(void)
 	while(1)
 	{
 		struct sockaddr_in saddr_remote;
-		socklen_t sktaddrmt_len = sizeof saddr_remote;
-		void *request = NULL;
-		ssize_t req_len = 0; // Includes extra terminator
-
-		request = recvpkta(socketfd, &req_len, &saddr_remote, &sktaddrmt_len);
+		void *request = recvpkta(socketfd, &saddr_remote);
 
 		uint16_t opcode = *(uint16_t *)request;
-		char *filename = (char *)(request+2);
+		const char *filename = (char *)(request+2);
 		size_t fname_len = strlen(filename);
 		char *mode = (char *)(filename+fname_len+1);
-		size_t mode_len = strlen(mode);
-		strtolower(mode, mode_len);
+		strtolower(mode, strlen(mode));
 
 		if(opcode == OPC_RRQ)
 			printf("opcode: RRQ\n");
@@ -40,13 +35,13 @@ int main(void)
 		printf("xfermode: %s\n", mode);
 		putchar('\n');
 
-		if((opcode == OPC_RRQ || opcode == OPC_WRQ) && req_len == 2+fname_len+1+mode_len+1)
+		if(opcode == OPC_RRQ || opcode == OPC_WRQ)
 		{
 			pthread_t thread;
-			void *actuals = malloc(sktaddrmt_len+2+fname_len+1);
+			void *actuals = malloc(sizeof(saddr_remote)+2+fname_len+1);
 			*(struct sockaddr_in *)actuals = saddr_remote;
-			*(uint16_t *)(actuals+sktaddrmt_len) = opcode;
-			memcpy(actuals+sktaddrmt_len+2, filename, fname_len+1);
+			*(uint16_t *)(actuals+sizeof saddr_remote) = opcode;
+			memcpy(actuals+sizeof(saddr_remote)+2, filename, fname_len+1);
 			pthread_create(&thread, NULL, &connection, actuals);
 		}
 		else

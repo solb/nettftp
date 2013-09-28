@@ -43,25 +43,36 @@ int openudp(uint16_t port)
 	return socketfd;
 }
 
-void *recvpkt(int sfd, ssize_t *msg_len)
+void *recvpkt(int sfd)
 {
-	return recvpkta(sfd, msg_len, NULL, 0);
+	return recvpkta(sfd, NULL);
 }
 
-void *recvpkta(int sfd, ssize_t *msg_len, struct sockaddr_in *rmt_saddr, socklen_t *rsaddr_len)
+void *recvpkta(int sfd, struct sockaddr_in *rmt_saddr)
 {
+	recvpktal(sfd, NULL, rmt_saddr);
+}
+
+void *recvpktal(int sfd, size_t *len_out, struct sockaddr_in *rmt_saddr)
+{
+	ssize_t msg_len;
+	socklen_t rsaddr_len = sizeof(struct sockaddr_in);
+
 	// Listen for an incoming message and note its length:
-	if((*msg_len = recvfrom(sfd, NULL, 0, MSG_TRUNC|MSG_PEEK, (struct sockaddr *)rmt_saddr, rsaddr_len)) < 0) // TODO Handle shutdown
+	if((msg_len = recvfrom(sfd, NULL, 0, MSG_TRUNC|MSG_PEEK, (struct sockaddr *)rmt_saddr, rmt_saddr ? &rsaddr_len : NULL)) < 0)
 		handle_error("recvfrom()");
 
-	// Check for client closing connection:
-	if(*msg_len == 0)
+	// Check whether remote terminated the connection:
+	if(msg_len == 0)
 		return NULL;
 
 	// Read the message:
-	void *msg = malloc(*msg_len);
-	if(recv(sfd, msg, *msg_len, 0) <= 0)
+	void *msg = malloc(msg_len);
+	if(recv(sfd, msg, msg_len, 0) <= 0)
 		handle_error("recv()");
+
+	if(len_out)
+		*len_out = msg_len;
 	return msg;
 }
 
@@ -72,26 +83,25 @@ void sendfile(int sfd, int fd, struct sockaddr_in *dest)
 	buf[1] = 0; // Block ID
 	int len = DATA_LEN;
 
-	ssize_t msg_len;
 	for(buf[1] = 0; len == DATA_LEN; ++buf[1])
 	{
 		len = read(fd, buf+2, DATA_LEN);
 		sendto(sfd, buf, 4+len, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
 
 		// Make sure something (hopefully an ACK) arrives
-		uint16_t *resp = recvpkt(sfd, &msg_len);
+		uint16_t *resp = recvpkt(sfd);
 		free(resp);
 	}
 }
 
 const char *recvfile(int sfd, int fd)
 {
-	ssize_t msg_len;
+	size_t msg_len;
 	struct sockaddr_in rsa;
-	socklen_t rln;
+
 	do
 	{
-		uint16_t *inc = recvpkta(sfd, &msg_len, &rsa, &rln);
+		uint16_t *inc = recvpktal(sfd, &msg_len, &rsa);
 
 		if(iserr(inc))
 		{
