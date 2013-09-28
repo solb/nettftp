@@ -25,6 +25,8 @@ int main(void)
 		char *mode = (char *)(filename+fname_len+1);
 		strtolower(mode, strlen(mode));
 
+#ifdef DEBUG
+		printf("received a request:\n");
 		if(opcode == OPC_RRQ)
 			printf("opcode: RRQ\n");
 		else if(opcode == OPC_WRQ)
@@ -34,6 +36,7 @@ int main(void)
 		printf("filename: %s\n", filename);
 		printf("xfermode: %s\n", mode);
 		putchar('\n');
+#endif
 
 		if(opcode == OPC_RRQ || opcode == OPC_WRQ)
 		{
@@ -56,21 +59,23 @@ int main(void)
 
 void *connection(void *args)
 {
-	printf("spawned a thread!\n");
 
 	struct sockaddr_in *rmtsocket = (struct sockaddr_in *)args;
 	socklen_t rmtskt_len = sizeof(struct sockaddr_in);
 	uint16_t oper = *(uint16_t *)(args+rmtskt_len);
 	char *filename = (char *)(args+rmtskt_len+2);
-	printf("oper: %hu\nname: %s\n", oper, filename);
 	int locsocket = openudp(0);
 
+#ifdef DEBUG
+	printf("spawned a thread!\n");
+	printf("oper: %hu\nname: %s\n", oper, filename);
 	struct sockaddr_in mysock;
 	socklen_t mysck_len = sizeof mysock;
 	getsockname(locsocket, (struct sockaddr *)&mysock, &mysck_len);
-	printf("server: %hu\n", ntohs(mysock.sin_port)); // TODO Remove all this if unused
+	printf("server: %hu\n", ntohs(mysock.sin_port));
 	printf("client: %hu\n", ntohs(rmtsocket->sin_port));
 	putchar('\n');
+#endif
 
 	int fd;
 	if((fd = open(filename, oper == OPC_WRQ ? O_WRONLY|O_CREAT|O_EXCL : O_RDONLY, 0666)) < 0)

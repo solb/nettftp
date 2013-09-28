@@ -171,6 +171,8 @@ int main(void)
 	free(buf);
 	if(server)
 		freeaddrinfo(server);
+
+	return 0;
 }
 
 void readin(char **bufptr, size_t *bufcap)
