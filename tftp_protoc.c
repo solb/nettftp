@@ -93,7 +93,7 @@ void *recvpktal(int sfd, size_t *len_out, struct sockaddr_in *rmt_saddr)
 // Accepts: socket file descriptor, file descriptor, pointer to destination address
 void sendfile(int sfd, int fd, struct sockaddr_in *dest)
 {
-	uint16_t *buf = malloc(4+DATA_LEN);
+	uint16_t buf[4+DATA_LEN];
 	buf[0] = OPC_DAT;
 	buf[1] = 0; // Block ID
 	int len = DATA_LEN;

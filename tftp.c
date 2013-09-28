@@ -267,7 +267,7 @@ void sendreq(int sfd, const char* pathname, int opcode, struct sockaddr *dest)
 {
 	uint8_t req[2+strlen(pathname)+1+strlen(MODE_OCTET)+1];
 	*(uint16_t *)req = opcode;
-	memcpy(req+2, pathname, strlen(pathname)+1);
-	memcpy(req+2+strlen(pathname)+1, MODE_OCTET, strlen(MODE_OCTET)+1);
+	strcpy(req+2, pathname);
+	strcpy(req+2+strlen(pathname)+1, MODE_OCTET);
 	sendto(sfd, req, sizeof req, 0, dest, sizeof(struct sockaddr_in));
 }

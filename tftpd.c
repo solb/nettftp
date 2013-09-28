@@ -8,7 +8,7 @@
 #include <string.h>
 
 static void *connection(void *);
-static void strtolower(char *, size_t);
+static void strtolower(char *);
 
 // Runs the main loop that accepts read and write requests.
 // Returns: exit status
@@ -35,7 +35,7 @@ int main(void)
 		const char *filename = (char *)(request+2);
 		size_t fname_len = strlen(filename);
 		char *mode = (char *)(filename+fname_len+1);
-		strtolower(mode, strlen(mode));
+		strtolower(mode);
 
 #ifdef DEBUG
 		fprintf(stderr, "received a request:\n");
@@ -121,9 +121,9 @@ void *connection(void *args)
 
 // Converts a string to lowercase in-place.
 // Accepts: null-terminated string
-void strtolower(char *a, size_t l)
+void strtolower(char *a)
 {
 	int index;
-	for(index = 0; index < l; ++index)
+	for(index = 0; a[index]; ++index)
 		a[index] = tolower(a[index]);
 }
