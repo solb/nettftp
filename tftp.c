@@ -76,7 +76,36 @@ int main(void)
 			((struct sockaddr_in *)server->ai_addr)->sin_port = htons(port);
 		}
 		else if(strncmp(cmd, CMD_PUT, len) == 0)
-			printf("file submission unimplemented\n");
+		{
+			char *pathname = strtok(NULL, "");
+			if(!pathname)
+			{
+				usage(CMD_PUT, "pathname", NULL);
+				continue;
+			}
+			if(!server)
+			{
+				noconn(cmd);
+				continue;
+			}
+
+			uint8_t rmtack[4];
+			uint8_t *rmtack_ptr;
+			ssize_t rmak_len;
+			struct sockaddr_in dest_addr;
+			socklen_t dest_adln;
+			sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
+			rmtack_ptr = recvpkta(sfd, &rmak_len, &dest_addr, &dest_adln);
+
+			int fd;
+			if((fd = open(pathname, O_RDONLY)) < 0)
+				handle_error("open()"); // TODO Be user-friendly
+
+			sendfile(sfd, fd, &dest_addr);
+
+			if(fd >= 0)
+				close(fd);
+		}
 		else if(strncmp(cmd, CMD_GET, len) == 0)
 		{
 			char *pathname = strtok(NULL, "");

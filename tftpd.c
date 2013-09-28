@@ -93,6 +93,8 @@ void *connection(void *args)
 		ack[0] = OPC_ACK;
 		ack[1] = (uint16_t)0;
 		sendto(locsocket, ack, sizeof ack, 0, (struct sockaddr *)rmtsocket, rmtskt_len);
+
+		recvfile(locsocket, fd);
 	}
 
 	close(fd);

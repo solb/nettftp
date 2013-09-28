@@ -76,7 +76,7 @@ void sendfile(int sfd, int fd, struct sockaddr_in *dest)
 	{
 		len = read(fd, buf+2, DATA_LEN);
 		sendto(sfd, buf, 4+len, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
-		// TODO Await ACK
+		// TODO Await ACK, return any error
 	}
 }
 
