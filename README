@@ -1,0 +1,26 @@
+Sol Boucher
+CSCI-651-01
+09/29/13
+Project 1 README
+
+To compile the client and server, do
+
+	$ make
+
+Executing the server as
+
+	$ ./tftpd
+
+ causes it to attempt to bind to port 69.  However, if on Linux it lacks any of CAP_NET_BIND_SERVICE, this will fail and it will fall back to binding on the non-privileged port 1069.
+
+Open the client with
+
+	$ ./tftp
+
+ then to connect to a server, do
+
+	tftp> c[onnect] <IP or hostname> [port]
+
+Note that the client always defaults to port 1069---not 69!---unless an alternate preference is provided.  At this point, you can use the g[et] and p[ut] directives, which will download files into the local working directory and upload files into the remote working directory, respectively.  Because of their reliance on working directories, the two programs are much more intuitive to use when executed from separate locations.
+
+My TFTP implementation is atop UDP, but doesn't implement timeouts or retransmission.  Additionally, it only supports the octal transfer mechanism, and will not recognize netascii or mail.
