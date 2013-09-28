@@ -65,6 +65,40 @@ void *recvpkta(int sfd, ssize_t *msg_len, struct sockaddr_in *rmt_saddr, socklen
 	return msg;
 }
 
+void sendfile(int sfd, int fd, struct sockaddr_in *dest)
+{
+	uint16_t *buf = malloc(4+DATA_LEN);
+	buf[0] = OPC_DAT;
+	buf[1] = 0; // Block ID
+	int len = DATA_LEN;
+
+	for(buf[1] = 0; len == DATA_LEN; ++buf[1])
+	{
+		len = read(fd, buf+2, DATA_LEN);
+		sendto(sfd, buf, 4+len, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
+		// TODO Await ACK
+	}
+}
+
+const char *recvfile(int sfd, int fd)
+{
+	ssize_t msg_len;
+	do
+	{
+		uint16_t *inc = recvpkt(sfd, &msg_len);
+
+		if(iserr(inc))
+			return strerr(inc);
+
+		if(msg_len > 4)
+			write(fd, inc+2, msg_len-4);
+		// TODO Send ACK
+	}
+	while(msg_len == 4+DATA_LEN);
+
+	return NULL;
+}
+
 void diagerrno(int sfd, struct sockaddr_in *dest)
 {
 	switch(errno)

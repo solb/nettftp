@@ -93,29 +93,18 @@ int main(void)
 
 			sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
 
-			int fd = -1;
+			int fd;
 			if((fd = open(basename(pathname), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
 				handle_error("open()"); // TODO Be user-friendly
 
-			ssize_t msg_len;
-			do
+			const char *res = recvfile(sfd, fd);
+			if(res)
 			{
-				uint16_t *inc = recvpkt(sfd, &msg_len);
-
-				if(iserr(inc))
-				{
-					printf("%s\n", strerr(inc));
-					close(fd);
-					fd = -1;
-					unlink(basename(pathname));
-					break;
-				}
-
-				if(msg_len > 4)
-					write(fd, inc+2, msg_len-4);
-				// TODO Send ACK
+				printf("%s\n", res);
+				close(fd);
+				fd = -1;
+				unlink(basename(pathname));
 			}
-			while(msg_len == 4+DATA_LEN);
 
 			if(fd >= 0)
 				close(fd);

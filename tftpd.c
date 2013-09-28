@@ -64,7 +64,7 @@ void *connection(void *args)
 	printf("spawned a thread!\n");
 
 	struct sockaddr_in *rmtsocket = (struct sockaddr_in *)args;
-	socklen_t rmtskt_len = sizeof *rmtsocket;
+	socklen_t rmtskt_len = sizeof(struct sockaddr_in);
 	uint16_t oper = *(uint16_t *)(args+rmtskt_len);
 	char *filename = (char *)(args+rmtskt_len+2);
 	printf("oper: %hu\nname: %s\n", oper, filename);
@@ -86,19 +86,7 @@ void *connection(void *args)
 	}
 
 	if(oper == OPC_RRQ)
-	{
-		uint16_t *buf = malloc(4+DATA_LEN);
-		buf[0] = OPC_DAT;
-		buf[1] = 0; // Block ID
-		int len = DATA_LEN;
-
-		for(buf[1] = 0; len == DATA_LEN; ++buf[1])
-		{
-			len = read(fd, buf+2, DATA_LEN);
-			sendto(locsocket, buf, 4+len, 0, (struct sockaddr *)rmtsocket, rmtskt_len);
-			// TODO Await ACK
-		}
-	}
+		sendfile(locsocket, fd, rmtsocket);
 	else // oper == OPC_WRQ
 	{
 		uint16_t ack[2];
