@@ -1,3 +1,4 @@
 tester
 tftp
 tftpd
+tftp_protoc.o
