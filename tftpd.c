@@ -32,26 +32,28 @@ int main(void)
 
 		// Make sure it has a request opcode:
 		uint16_t opcode = *(uint16_t *)request;
-		const char *filename = (char *)(request+2);
-		size_t fname_len = strlen(filename);
-		char *mode = (char *)(filename+fname_len+1);
-		strtolower(mode);
-
-#ifdef DEBUG
-		fprintf(stderr, "received a request:\n");
-		if(opcode == OPC_RRQ)
-			fprintf(stderr, "opcode: RRQ\n");
-		else if(opcode == OPC_WRQ)
-			fprintf(stderr, "opcode: WRQ\n");
-		else
-			fprintf(stderr, "unexpected opcode!\n");
-		fprintf(stderr, "filename: %s\n", filename);
-		fprintf(stderr, "xfermode: %s\n", mode);
-		fprintf(stderr, "\n");
-#endif
-
 		if(opcode == OPC_RRQ || opcode == OPC_WRQ)
 		{
+			// Split it up into usable chunks:
+			const char *filename = (char *)(request+2);
+			size_t fname_len = strlen(filename);
+			char *mode = (char *)(filename+fname_len+1);
+			strtolower(mode);
+
+#ifdef DEBUG
+			fprintf(stderr, "received a request:\n");
+			if(opcode == OPC_RRQ)
+				fprintf(stderr, "opcode: RRQ\n");
+			else if(opcode == OPC_WRQ)
+				fprintf(stderr, "opcode: WRQ\n");
+			else
+				fprintf(stderr, "unexpected opcode!\n");
+			fprintf(stderr, "filename: %s\n", filename);
+			fprintf(stderr, "xfermode: %s\n", mode);
+			fprintf(stderr, "\n");
+#endif
+
+			// Pass all relevant data off to a separate thread:
 			pthread_t thread;
 			void *actuals = malloc(sizeof(saddr_remote)+2+fname_len+1);
 			*(struct sockaddr_in *)actuals = saddr_remote;
