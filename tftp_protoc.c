@@ -188,7 +188,7 @@ void senderr(int sfd, uint16_t ercode, struct sockaddr_in *dest)
 // Determines whether the given datagram is an error response.
 // Accepts: the packet
 // Returns: the answer
-int iserr(void *payload)
+bool iserr(void *payload)
 {
 	return *(uint16_t *)payload == OPC_ERR;
 }

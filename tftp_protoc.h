@@ -28,6 +28,8 @@ const uint16_t ERR_UNKNOWNTID;
 const uint16_t ERR_CLOBBER;
 const uint16_t ERR_UNKNOWNUSER;
 
+typedef int bool;
+
 // Utility functions:
 int openudp(uint16_t);
 void *recvpkt(int);
@@ -38,7 +40,7 @@ const char *recvfile(int, int);
 void sendack(int, uint16_t, struct sockaddr_in *);
 void diagerrno(int, struct sockaddr_in *);
 void senderr(int, uint16_t, struct sockaddr_in *);
-int iserr(void *);
+bool iserr(void *);
 const char *strerr(void *);
 void handle_error(const char *);
 

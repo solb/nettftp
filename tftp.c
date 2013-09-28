@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef int bool;
-
 // Sex appeal:
 static const char *const SHL_PS1 = "tftp> ";
 
@@ -22,6 +20,7 @@ static const char *const CMD_GFO = "quit";
 static const char *const CMD_HLP = "?";
 
 static void readin(char **, size_t *);
+static bool homog(const char *, char);
 static void usage(const char *, const char *, const char *);
 static void noconn(const char *);
 static void sendreq(int, const char*, int, struct sockaddr *);
@@ -56,10 +55,12 @@ int main(void)
 		{
 			printf("%s", SHL_PS1);
 			readin(&buf, &cap);
-			cmd = strtok(buf, " ");
-			len = strlen(cmd);
 		}
-		while(!len);
+		while(homog(buf, ' '));
+
+		// Cleave off the command (first word):
+		cmd = strtok(buf, " ");
+		len = strlen(cmd);
 
 		if(strncmp(cmd, CMD_CON, len) == 0)
 		{
@@ -225,6 +226,18 @@ void readin(char **bufptr, size_t *bufcap)
 		*bufptr = buf;
 		*bufcap = *bufcap*2;
 	}
+}
+
+// Tests whether a string is entirely composed of a particular character.
+// Accepts: the string and the character
+bool homog(const char *str, char chr)
+{
+	size_t len = strlen(str);
+	int ind;
+	for(ind = 0; ind < len; ++ind)
+		if(str[ind] != chr)
+			return 0;
+	return 1;
 }
 
 // Prints to standard error the usage string describing a command expecting one required argument and up to one optional argument.
