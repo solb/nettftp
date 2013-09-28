@@ -26,6 +26,9 @@ const uint16_t ERR_UNKNOWNTID = 5;
 const uint16_t ERR_CLOBBER = 6;
 const uint16_t ERR_UNKNOWNUSER = 7;
 
+// Opens a UDP socket and binds it to the specified port.
+// Accepts: port number or 0 to choose an arbitrary ephemeral port
+// Returns: file descriptor or -1 in case of an error
 int openudp(uint16_t port)
 {
 	// Open UDP socket over IP:
@@ -44,16 +47,25 @@ int openudp(uint16_t port)
 	return socketfd;
 }
 
+// Listens for a datagram arriving on the specified socket.
+// Accepts: socket file descriptor
+// Returns: caller-owned buffer
 void *recvpkt(int sfd)
 {
 	return recvpkta(sfd, NULL);
 }
 
+// Listens on socket for incoming datagram and reveals its source address.
+// Accepts: file descriptor, pointer to socket address structure or NULL
+// Returns: caller-owned buffer
 void *recvpkta(int sfd, struct sockaddr_in *rmt_saddr)
 {
 	recvpktal(sfd, NULL, rmt_saddr);
 }
 
+// Listens on socket for incoming datagram and reveals its length and source address.
+// Accepts: file descriptor, pointer to length or NULL, pointer to address or NULL
+// Returns: caller-owned buffer
 void *recvpktal(int sfd, size_t *len_out, struct sockaddr_in *rmt_saddr)
 {
 	ssize_t msg_len;
@@ -77,6 +89,8 @@ void *recvpktal(int sfd, size_t *len_out, struct sockaddr_in *rmt_saddr)
 	return msg;
 }
 
+// Sends a file over a network socket.
+// Accepts: socket file descriptor, file descriptor, pointer to destination address
 void sendfile(int sfd, int fd, struct sockaddr_in *dest)
 {
 	uint16_t *buf = malloc(4+DATA_LEN);
@@ -89,12 +103,15 @@ void sendfile(int sfd, int fd, struct sockaddr_in *dest)
 		len = read(fd, buf+2, DATA_LEN);
 		sendto(sfd, buf, 4+len, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
 
-		// Make sure something (hopefully an ACK) arrives
+		// Make sure something (hopefully an ACK) arrives:
 		uint16_t *resp = recvpkt(sfd);
 		free(resp);
 	}
 }
 
+// Receives a file over a network socket.
+// Accepts: socket file descriptor, file descriptor
+// Returns: NULL or a human-readable error message
 const char *recvfile(int sfd, int fd)
 {
 	size_t msg_len;
@@ -122,6 +139,8 @@ const char *recvfile(int sfd, int fd)
 	return NULL;
 }
 
+// Acknowledges receipt of a block of the caller's choice.
+// Accepts: socket file descriptor, block number, pointer to destination
 void sendack(int sfd, uint16_t blknum, struct sockaddr_in *dest)
 {
 	uint16_t ack[2];
@@ -130,6 +149,8 @@ void sendack(int sfd, uint16_t blknum, struct sockaddr_in *dest)
 	sendto(sfd, ack, sizeof ack, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
 }
 
+// Sends an error datagram appropriate for the value of the errno variable.
+// Accepts: socket file descriptor, destination address pointer
 void diagerrno(int sfd, struct sockaddr_in *dest)
 {
 	switch(errno)
@@ -153,6 +174,8 @@ void diagerrno(int sfd, struct sockaddr_in *dest)
 	}
 }
 
+// Transmit the specified error code accross the network.
+// Accepts: socket file descriptor, error code, pointer to destination
 void senderr(int sfd, uint16_t ercode, struct sockaddr_in *dest)
 {
 	uint8_t err[5];
@@ -162,11 +185,17 @@ void senderr(int sfd, uint16_t ercode, struct sockaddr_in *dest)
 	sendto(sfd, err, sizeof err, 0, (struct sockaddr *)dest, sizeof(struct sockaddr_in));
 }
 
+// Determines whether the given datagram is an error response.
+// Accepts: the packet
+// Returns: the answer
 int iserr(void *payload)
 {
 	return *(uint16_t *)payload == OPC_ERR;
 }
 
+// Converts an error datagram to a human-readable complaint.
+// Accepts: the packet
+// Returns: the demystification
 const char *strerr(void *payload)
 {
 	uint16_t code = ((uint16_t *)payload)[1];
@@ -190,6 +219,8 @@ const char *strerr(void *payload)
 		return "Inexcusable error";
 }
 
+// Bails out of the program, printing an error based on the given context and errno.
+// Accepts: the context of the problem
 void handle_error(const char *desc)
 {
 	int errcode = errno;

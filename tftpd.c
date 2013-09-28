@@ -10,8 +10,11 @@
 static void *connection(void *);
 static void strtolower(char *, size_t);
 
+// Runs the main loop that accepts read and write requests.
+// Returns: exit status
 int main(void)
 {
+	// Bind to a privileged port if possible, but fall back if necessary:
 	int socketfd = openudp(PORT_PRIVILEGED);
 	if(socketfd < 0)
 	{
@@ -20,11 +23,14 @@ int main(void)
 			handle_error("bind()");
 	}
 
+	// As requests are received, spawn threads or return error datagrams:
+	struct sockaddr_in saddr_remote;
 	while(1)
 	{
-		struct sockaddr_in saddr_remote;
+		// Receive each incoming request:
 		void *request = recvpkta(socketfd, &saddr_remote);
 
+		// Make sure it has a request opcode:
 		uint16_t opcode = *(uint16_t *)request;
 		const char *filename = (char *)(request+2);
 		size_t fname_len = strlen(filename);
@@ -63,13 +69,18 @@ int main(void)
 	return 0;
 }
 
+// Manages each file transfer requested of the server.
+// Accepts: sockaddr_in of client, unsigned 16-bit opcode, null-terminated filename
+// Returns: NULL
 void *connection(void *args)
 {
-
+	// Let's be reasonable and stop dealing with The Blob:
 	struct sockaddr_in *rmtsocket = (struct sockaddr_in *)args;
 	socklen_t rmtskt_len = sizeof(struct sockaddr_in);
 	uint16_t oper = *(uint16_t *)(args+rmtskt_len);
 	char *filename = (char *)(args+rmtskt_len+2);
+
+	// Open up an ephemeral port for the transfer:
 	int locsocket = openudp(0);
 	if(locsocket < 0)
 		handle_error("bind()");
@@ -85,6 +96,7 @@ void *connection(void *args)
 	fprintf(stderr, "\n");
 #endif
 
+	// Try to open the file for reading *or* writing, as appropriate:
 	int fd;
 	if((fd = open(filename, oper == OPC_WRQ ? O_WRONLY|O_CREAT|O_EXCL : O_RDONLY, 0666)) < 0)
 	{
@@ -93,6 +105,7 @@ void *connection(void *args)
 		return NULL;
 	}
 
+	// Send or receive file contents, as appropriate:
 	if(oper == OPC_RRQ)
 		sendfile(locsocket, fd, rmtsocket);
 	else // oper == OPC_WRQ
@@ -106,6 +119,8 @@ void *connection(void *args)
 	return NULL;
 }
 
+// Converts a string to lowercase in-place.
+// Accepts: null-terminated string
 void strtolower(char *a, size_t l)
 {
 	int index;

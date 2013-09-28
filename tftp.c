@@ -26,25 +26,32 @@ static void usage(const char *, const char *, const char *);
 static void noconn(const char *);
 static void sendreq(int, const char*, int, struct sockaddr *);
 
+// Runs the interactive loop and all file transfers.
+// Returns: exit status
 int main(void)
 {
+	// Used to control DNS resolution requests:
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET; // TODO IPv6 support
 	hints.ai_socktype = SOCK_DGRAM;
 
+	// Bind to an ephemeral network port:
 	struct addrinfo *server = NULL;
 	int sfd = openudp(0);
 	if(sfd < 0)
 		handle_error("bind()");
 
+	// Allocate (small) space to store user input:
 	char *buf = malloc(1);
 	size_t cap = 1;
 	char *cmd; // First word of buf
 	size_t len; // Length of cmd
 
+	// Main input loop, which normally only breaks upon a GFO:
 	do
 	{
+		// Keep prompting until the user brings us back something good:
 		do
 		{
 			printf("%s", SHL_PS1);
@@ -56,23 +63,28 @@ int main(void)
 
 		if(strncmp(cmd, CMD_CON, len) == 0)
 		{
+			// Read the arguments:
 			const char *hostname = strtok(NULL, " ");
 			const char *tmp = strtok(NULL, " ");
 			in_port_t port = PORT_UNPRIVILEGED;
 			if(tmp)
 				port = atoi(tmp);
 
+			// Ensure a hostname or IP has been provided:
 			if(!hostname)
 			{
 				usage(CMD_CON, "hostname", "port");
 				continue;
 			}
+
+			// Avoid leaking any existing address:
 			if(server)
 			{
 				freeaddrinfo(server);
 				server = NULL;
 			}
 
+			// Try to resolve the requested hostname:
 			if(getaddrinfo(hostname, NULL, &hints, &server))
 			{
 				fprintf(stderr, "Unable to resolve hostname\n");
@@ -97,6 +109,7 @@ int main(void)
 				continue;
 			}
 
+			// Try opening the file for reading:
 			int fd;
 			if((fd = open(pathname, O_RDONLY)) < 0)
 			{
@@ -104,6 +117,7 @@ int main(void)
 				continue;
 			}
 
+			// Send a request and record the port used to acknowledge:
 			struct sockaddr_in dest_addr;
 			sendreq(sfd, pathname, OPC_WRQ, server->ai_addr);
 			uint8_t *rmtack = recvpkta(sfd, &dest_addr);
@@ -115,6 +129,7 @@ int main(void)
 			}
 			free(rmtack);
 
+			// Transmit the file:
 			sendfile(sfd, fd, &dest_addr);
 
 			if(fd >= 0)
@@ -134,6 +149,7 @@ int main(void)
 				continue;
 			}
 
+			// Try opening a file of that name for writing:
 			char filename[strlen(pathname)+1];
 			memcpy(filename, pathname, sizeof filename);
 			int fd;
@@ -143,6 +159,7 @@ int main(void)
 				continue;
 			}
 
+			// Send a request and await the incoming file:
 			sendreq(sfd, pathname, OPC_RRQ, server->ai_addr);
 			const char *res = recvfile(sfd, fd);
 			if(res)
@@ -177,6 +194,8 @@ int main(void)
 	return 0;
 }
 
+// Reads one line of input from standard input into the provided buffer.  Each time the buffer would overflow, it is reallocated at double its previous size.
+// Accepts: the target buffer, its length in bytes
 void readin(char **bufptr, size_t *bufcap)
 {
 	char *buf = *bufptr;
@@ -208,6 +227,8 @@ void readin(char **bufptr, size_t *bufcap)
 	}
 }
 
+// Prints to standard error the usage string describing a command expecting one required argument and up to one optional argument.
+// Accepts: the command, its required argument, and its optional argument or NULL
 void usage(const char *cmd, const char *reqd, const char *optl)
 {
 	char trailer[optl ? strlen(optl)+4 : 1];
@@ -219,12 +240,16 @@ void usage(const char *cmd, const char *reqd, const char *optl)
 	fprintf(stderr, "Required argument %s not provided.\n", reqd);
 }
 
+// Complains to standard error that a connection should have been established before typing something.
+// Accepts: that which was typed
 void noconn(const char *typed)
 {
 	fprintf(stderr, "%s: expects existing connection\n", typed);
 	fprintf(stderr, "Did you call %s?\n", CMD_CON);
 }
 
+// Sends a request datagram over the network specifying transfer type octal.
+// Accepts: local socket file descriptor, requested filename, OPC_RRQ or OPC_WRQ, and remote socket address
 void sendreq(int sfd, const char* pathname, int opcode, struct sockaddr *dest)
 {
 	uint8_t req[2+strlen(pathname)+1+strlen(MODE_OCTET)+1];
