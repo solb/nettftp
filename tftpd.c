@@ -26,16 +26,16 @@ int main(void)
 		strtolower(mode, strlen(mode));
 
 #ifdef DEBUG
-		printf("received a request:\n");
+		fprintf(stderr, "received a request:\n");
 		if(opcode == OPC_RRQ)
-			printf("opcode: RRQ\n");
+			fprintf(stderr, "opcode: RRQ\n");
 		else if(opcode == OPC_WRQ)
-			printf("opcode: WRQ\n");
+			fprintf(stderr, "opcode: WRQ\n");
 		else
-			printf("unexpected opcode!\n");
-		printf("filename: %s\n", filename);
-		printf("xfermode: %s\n", mode);
-		putchar('\n');
+			fprintf(stderr, "unexpected opcode!\n");
+		fprintf(stderr, "filename: %s\n", filename);
+		fprintf(stderr, "xfermode: %s\n", mode);
+		fprintf(stderr, "\n");
 #endif
 
 		if(opcode == OPC_RRQ || opcode == OPC_WRQ)
@@ -67,14 +67,14 @@ void *connection(void *args)
 	int locsocket = openudp(0);
 
 #ifdef DEBUG
-	printf("spawned a thread!\n");
-	printf("oper: %hu\nname: %s\n", oper, filename);
+	fprintf(stderr, "spawned a thread!\n");
+	fprintf(stderr, "oper: %hu\nname: %s\n", oper, filename);
 	struct sockaddr_in mysock;
 	socklen_t mysck_len = sizeof mysock;
 	getsockname(locsocket, (struct sockaddr *)&mysock, &mysck_len);
-	printf("server: %hu\n", ntohs(mysock.sin_port));
-	printf("client: %hu\n", ntohs(rmtsocket->sin_port));
-	putchar('\n');
+	fprintf(stderr, "server: %hu\n", ntohs(mysock.sin_port));
+	fprintf(stderr, "client: %hu\n", ntohs(rmtsocket->sin_port));
+	fprintf(stderr, "\n");
 #endif
 
 	int fd;

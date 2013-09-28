@@ -73,7 +73,7 @@ int main(void)
 
 			if(getaddrinfo(hostname, NULL, &hints, &server))
 			{
-				printf("Unable to resolve hostname\n");
+				fprintf(stderr, "Unable to resolve hostname\n");
 				freeaddrinfo(server);
 				server = NULL;
 				continue;
@@ -98,7 +98,7 @@ int main(void)
 			int fd;
 			if((fd = open(pathname, O_RDONLY)) < 0)
 			{
-				printf("local: Unable to read specified file\n");
+				fprintf(stderr, "local: Unable to read specified file\n");
 				continue;
 			}
 
@@ -107,7 +107,7 @@ int main(void)
 			uint8_t *rmtack = recvpkta(sfd, &dest_addr);
 			if(iserr(rmtack))
 			{
-				printf("remote: %s\n", strerr(rmtack));
+				fprintf(stderr, "remote: %s\n", strerr(rmtack));
 				free(rmtack);
 				continue;
 			}
@@ -137,7 +137,7 @@ int main(void)
 			int fd;
 			if((fd = open(basename(filename), O_WRONLY|O_CREAT|O_EXCL, 0666)) < 0)
 			{
-				printf("local: Unable to create the new file\n");
+				fprintf(stderr, "local: Unable to create the new file\n");
 				continue;
 			}
 
@@ -145,7 +145,7 @@ int main(void)
 			const char *res = recvfile(sfd, fd);
 			if(res)
 			{
-				printf("remote: %s\n", res);
+				fprintf(stderr, "remote: %s\n", res);
 				close(fd);
 				fd = -1;
 				unlink(basename(filename));
@@ -164,7 +164,7 @@ int main(void)
 			printf("%s\t\tprint help information\n", CMD_HLP);
 		}
 		else if(strncmp(cmd, CMD_GFO, len) != 0)
-			printf("%s: unknown directive\n", cmd);
+			fprintf(stderr, "%s: unknown directive\n", cmd);
 	}
 	while(strncmp(cmd, CMD_GFO, len) != 0);
 
@@ -213,14 +213,14 @@ void usage(const char *cmd, const char *reqd, const char *optl)
 	if(optl)
 		sprintf(trailer, " [%s]", optl);
 
-	printf("USAGE: %s <%s>%s\n", cmd, reqd, trailer);
-	printf("Required argument %s not provided.\n", reqd);
+	fprintf(stderr, "USAGE: %s <%s>%s\n", cmd, reqd, trailer);
+	fprintf(stderr, "Required argument %s not provided.\n", reqd);
 }
 
 void noconn(const char *typed)
 {
-	printf("%s: expects existing connection\n", typed);
-	printf("Did you call %s?\n", CMD_CON);
+	fprintf(stderr, "%s: expects existing connection\n", typed);
+	fprintf(stderr, "Did you call %s?\n", CMD_CON);
 }
 
 void sendreq(int sfd, const char* pathname, int opcode, struct sockaddr *dest)
